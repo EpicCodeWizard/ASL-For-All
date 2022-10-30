@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.3/socket.io.js"></script>
+  <title>ASL Recognition</title>
+</head>
+
+<body>
+  <video id="video" style="display: none;"></video>
+  <canvas id="canvas" style="display: none;"></canvas>
+  <img id="photo" style="display: none;"/>
+  <pre id="lol"></pre>
+  <script>
+    function speak(msg) {
+      let utterance = new SpeechSynthesisUtterance(msg);
+      speechSynthesis.speak(utterance);
+    }
+    var text = document.getElementById("lol");
+    var num = 0;
+    socket = io();
+
+    const width = 200;
+    let height = 0;
+
+    let streaming = false;
+    var video = document.getElementById("video");
+    var canvas = document.getElementById("canvas");
+    var photo = document.getElementById("photo");
+
+    socket.on("txt", (arg) => {
+      speak(arg);
+      text.innerText += arg;
+    });
+
+    navigator.mediaDevices
+      .getUserMedia({video: true, audio: false})
+      .then((stream) => {
+        video.srcObject = stream;
+        video.play();
+      })
+      .catch((err) => {
+        console.error(`An error occurred: ${err}`);
+      });
+
+    video.addEventListener(
+      "canplay",
+      (ev) => {
+        if (!streaming) {
+          height = video.videoHeight / (video.videoWidth / width);
+          if (isNaN(height)) {
+            height = width / (4 / 3);
+          }
+          video.setAttribute("width", width);
+          video.setAttribute("height", height);
+          canvas.setAttribute("width", width);
+          canvas.setAttribute("height", height);
+          streaming = true;
+        }
+      }
+    );
+
+    const context = canvas.getContext("2d");
+    function addStuff() {
+      canvas.width = width;
+      canvas.height = height;
+      context.drawImage(video, 0, 0, width, height);
+      socket.emit("img", canvas.toDataURL("image/png"));
+    }
+    setInterval(addStuff, 1000 / 30);
+  </script>
+</body>
+
+</html>
